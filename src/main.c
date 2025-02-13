@@ -79,7 +79,6 @@ static void send_next_note(bool connected)
         if (message[4] > last_note)
             message[4] = first_note;
     }
-    tuh_midi_stream_flush(midi_dev_addr);
 }
 
 void core1_main() {
@@ -97,6 +96,7 @@ void core1_main() {
 int main()
 {
     board_init(); // must be called before tuh_init()
+    pio_usb_host_add_port(16, PIO_USB_PINOUT_DPDM);
     multicore_reset_core1();
     // all USB task run in core1
     multicore_launch_core1(core1_main);
@@ -110,14 +110,13 @@ int main()
     // This must be called after tuh_init(). Waiting for core1 to
     // boot does this.
     if (cyw43_arch_init()) {
-        printf("WiFi/Bluetooth module init for board LED failed");
+      printf("WiFi/Bluetooth module init for board LED failed");
         return -1;
     }
 #endif
     core0_booting = false;
     while (1) {
-        blink_led();
-        bool connected = midi_dev_addr != 0 && tuh_midi_configured(midi_dev_addr);
+      bool connected = midi_dev_addr != 0 && tuh_midi_configured(midi_dev_addr);
 
         send_next_note(connected);
     }
@@ -134,6 +133,8 @@ int main()
 // therefore report_desc = NULL, desc_len = 0
 void tuh_midi_mount_cb(uint8_t dev_addr, uint8_t in_ep, uint8_t out_ep, uint8_t num_cables_rx, uint16_t num_cables_tx)
 {
+  blink_led();
+
   printf("MIDI device address = %u, IN endpoint %u has %u cables, OUT endpoint %u has %u cables\r\n",
       dev_addr, in_ep & 0xf, num_cables_rx, out_ep & 0xf, num_cables_tx);
 

@@ -42,10 +42,6 @@ add_executable(CWirelessMIDI src/main.c
 pico_set_program_name(CWirelessMIDI "CWirelessMIDI")
 pico_set_program_version(CWirelessMIDI "0.1")
 
-# Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(CWirelessMIDI 1)
-pico_enable_stdio_usb(CWirelessMIDI 0)
-
 # Add the standard library to the build
 target_link_libraries(CWirelessMIDI
         pico_stdlib
@@ -61,6 +57,9 @@ add_subdirectory(lib/Pico-PIO-USB)
 target_link_libraries(CWirelessMIDI
         pico_pio_usb)
 # pico_enable_stdio_usb(CWirelessMIDI 1) 
+
+pico_enable_stdio_uart(CWirelessMIDI 1)
+pico_enable_stdio_usb(CWirelessMIDI 0)
 
 # Add MIDI host library
 add_subdirectory(lib/usb_midi_host)

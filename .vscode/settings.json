@@ -42,5 +42,6 @@
     "raspberry-pi-pico.cmakePath": "${HOME}/.pico-sdk/cmake/v3.29.9/bin/cmake",
     "raspberry-pi-pico.ninjaPath": "${HOME}/.pico-sdk/ninja/v1.12.1/ninja",
     "cortex-debug.gdbPath": "arm-none-eabi-gdb",
-    "cortex-debug.openocdPath": "/usr/local/bin/openocd"
+    "cortex-debug.openocdPath": "/usr/local/bin/openocd",
+    "cortex-debug.variableUseNaturalFormat": true
 }
