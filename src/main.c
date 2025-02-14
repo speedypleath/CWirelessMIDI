@@ -6,10 +6,11 @@
 #include "pico/multicore.h"
 #include "pio_usb.h"
 #include "tusb.h"
-#include "usb_midi_host.h"
-#ifdef RASPBERRYPI_PICO_W
+#include "bluetooth_midi.h"
+#include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
-#endif
+#include "pico/btstack_cyw43.h"
+
 // Because the PIO USB code runs in core 1
 // and USB MIDI OUT sends are triggered on core 0,
 // need to synchronize core startup
@@ -17,28 +18,6 @@ static volatile bool core1_booting = true;
 static volatile bool core0_booting = true;
 
 static uint8_t midi_dev_addr = 0;
-
-static void blink_led(void)
-{
-    static uint32_t previous_timestamp = {0};
-
-    static bool led_state = false;
-
-    uint32_t now = board_millis();
-    
-    int64_t diff = (int64_t)now - (int64_t)previous_timestamp;
-    if (diff < 0)
-        diff = -diff;
-    if (diff > 1000) {
-#ifdef RASPBERRYPI_PICO_W
-        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, led_state);
-#else
-        board_led_write(led_state);
-#endif
-        led_state = !led_state;
-        previous_timestamp = now;
-    }
-}
 
 static void send_next_note(bool connected)
 {
@@ -96,24 +75,25 @@ void core1_main() {
 int main()
 {
     board_init(); // must be called before tuh_init()
+    stdio_init_all();
+    // initialize CYW43 driver architecture (will enable BT if/because CYW43_ENABLE_BLUETOOTH == 1)
+    if (cyw43_arch_init()) {
+        printf("failed to initialise cyw43_arch\n");
+        return -1;
+    }
     pio_usb_host_add_port(16, PIO_USB_PINOUT_DPDM);
+
+    
+    init_bluetooth(profile_data);
+
     multicore_reset_core1();
     // all USB task run in core1
     multicore_launch_core1(core1_main);
     // wait for core 1 to finish claiming PIO state machines and DMA
     while(core1_booting) {
     }
-    printf("Pico MIDI Host Example\r\n");
-#ifdef RASPBERRYPI_PICO_W
-    // The Pico W LED is attached to the CYW43 WiFi/Bluetooth module
-    // Need to initialize it so the the LED blink can work
-    // This must be called after tuh_init(). Waiting for core1 to
-    // boot does this.
-    if (cyw43_arch_init()) {
-      printf("WiFi/Bluetooth module init for board LED failed");
-        return -1;
-    }
-#endif
+
+    // bluetooth_midi_init(); // Initialize Bluetooth MIDI
     core0_booting = false;
     while (1) {
       bool connected = midi_dev_addr != 0 && tuh_midi_configured(midi_dev_addr);
@@ -133,8 +113,6 @@ int main()
 // therefore report_desc = NULL, desc_len = 0
 void tuh_midi_mount_cb(uint8_t dev_addr, uint8_t in_ep, uint8_t out_ep, uint8_t num_cables_rx, uint16_t num_cables_tx)
 {
-  blink_led();
-
   printf("MIDI device address = %u, IN endpoint %u has %u cables, OUT endpoint %u has %u cables\r\n",
       dev_addr, in_ep & 0xf, num_cables_rx, out_ep & 0xf, num_cables_tx);
 
@@ -174,6 +152,7 @@ void tuh_midi_rx_cb(uint8_t dev_addr, uint32_t num_packets)
           printf("%02x ", buffer[idx]);
         }
         printf("\r\n");
+        // bluetooth_midi_send(buffer, bytes_read); // Send MIDI message over Bluetooth
       }
     }
   }

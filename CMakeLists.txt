@@ -35,12 +35,25 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(CWirelessMIDI src/main.c  
+add_executable(CWirelessMIDI src/main.c
+        src/bluetooth_midi.c
         ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
         ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c)
 
 pico_set_program_name(CWirelessMIDI "CWirelessMIDI")
 pico_set_program_version(CWirelessMIDI "0.1")
+target_include_directories(CWirelessMIDI PUBLIC src)
+
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/ring_buffer_lib)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib/pico-w-ble-midi-lib)
+# Add bluetooth library
+target_link_libraries(CWirelessMIDI 
+        pico_cyw43_arch_none
+        pico_btstack_cyw43
+        pico_btstack_ble
+        ble_midi_service_lib
+        ring_buffer_lib
+        )
 
 # Add the standard library to the build
 target_link_libraries(CWirelessMIDI
@@ -69,12 +82,12 @@ target_link_libraries(CWirelessMIDI
 # Add the standard include files to the build
 target_include_directories(CWirelessMIDI PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
+        src
 )
 
-# Add any user requested libraries
-target_link_libraries(CWirelessMIDI 
-        pico_cyw43_arch_none
-        )
+# pico_btstack_make_gatt_header(CWirelessMIDI PRIVATE ${CMAKE_CURRENT_LIST_DIR}/lib/pico-w-ble-midi-lib/midi_service.gatt)
+pico_btstack_make_gatt_header(CWirelessMIDI PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/bluetooth_midi.gatt ${CMAKE_CURRENT_LIST_DIR}/lib/pico-w-ble-midi-lib)
+
 
 pico_add_extra_outputs(CWirelessMIDI)
 
